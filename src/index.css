@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full w-full;
+  }
+
+  body {
+    @apply bg-white text-black antialiased;
+    font-family:
+      "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+      sans-serif;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white border border-gray-300 rounded-2xl;
+  }
+
+  .btn-primary {
+    @apply bg-black hover:bg-gray-800 text-white font-medium px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 border border-gray-300 text-black hover:text-gray-800 font-medium px-6 py-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .input-field {
+    @apply bg-white border border-gray-300 focus:border-gray-600 focus:ring-2 focus:ring-gray-200 rounded-xl px-4 py-3 transition-all duration-200 placeholder-gray-400 text-black;
+  }
+
+  .progress-bar {
+    @apply w-full bg-gray-200 rounded-full h-2 overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-gray-600 transition-all duration-300 ease-out;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
