@@ -63,6 +63,27 @@ npm run dev
 npm run build
 ```
 
+### Deployment to GitHub Pages
+
+This project is set up for automatic deployment to GitHub Pages:
+
+1. **Automatic Deployment**: When you push to the `main` branch, GitHub Actions will automatically build and deploy to GitHub Pages
+2. **Manual Deployment**: You can also deploy manually using:
+   ```bash
+   npm run deploy
+   ```
+3. **GitHub Pages Setup**: 
+   - The built application will be deployed to the `gh-pages` branch
+   - Ensure GitHub Pages is configured to serve from the `gh-pages` branch in your repository settings
+
+#### First-time Setup for GitHub Pages
+
+1. Push your code to a GitHub repository
+2. Go to your repository's Settings → Pages
+3. Set the source to "Deploy from a branch"
+4. Select the `gh-pages` branch as the source
+5. The GitHub Actions workflow will handle the rest automatically
+
 ## Usage
 
 1. **Select a Dataset**: Choose from the available MMDB datasets (ASN, City, Country)
