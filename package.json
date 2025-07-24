@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:production": "NODE_ENV=production tsc -b && NODE_ENV=production vite build",
     "preview": "vite preview",
     "typecheck": "tsc --build --pretty",
     "lint": "biome check",
     "lint:fix": "biome check --fix",
-    "predeploy": "npm run build",
+    "predeploy": "npm run build:production",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {

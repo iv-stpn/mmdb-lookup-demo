@@ -23,8 +23,8 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 # Build and deploy
-echo "📦 Building project..."
-npm run build
+echo "📦 Building project for production..."
+npm run build:production
 
 if [ $? -eq 0 ]; then
     echo "🚀 Deploying to gh-pages branch..."
