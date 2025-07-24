@@ -10,11 +10,11 @@ import type { MMDBDataset, MMDBRecord } from "./types";
 
 // Utility function for formatting file sizes
 const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
 };
 
 export interface MMDBContext {
@@ -34,10 +34,10 @@ export function createMMDBContext(): MMDBContext {
 export async function loadDataset(
   _context: MMDBContext,
   dataset: MMDBDataset,
-  onProgress?: (progress: { 
-    loaded: number; 
-    total: number; 
-    percentage: number; 
+  onProgress?: (progress: {
+    loaded: number;
+    total: number;
+    percentage: number;
     phase: string;
     speed?: number;
   }) => void
@@ -45,11 +45,11 @@ export async function loadDataset(
   try {
     console.log(`Loading dataset: ${dataset.name}`);
 
-    onProgress?.({ 
-      loaded: 0, 
-      total: 0, 
-      percentage: 0, 
-      phase: "Connecting to server..." 
+    onProgress?.({
+      loaded: 0,
+      total: 0,
+      percentage: 0,
+      phase: "Connecting to server...",
     });
 
     // Fetch the MMDB file with progress tracking
@@ -66,14 +66,17 @@ export async function loadDataset(
       );
     }
 
-    const contentLength = response.headers.get('content-length');
+    const contentLength = response.headers.get("content-length");
     const total = contentLength ? parseInt(contentLength, 10) : 0;
-    
-    onProgress?.({ 
-      loaded: 0, 
-      total, 
-      percentage: 0, 
-      phase: total > 0 ? `Downloading ${dataset.name} (${formatFileSize(total)})...` : `Downloading ${dataset.name}...`
+
+    onProgress?.({
+      loaded: 0,
+      total,
+      percentage: 0,
+      phase:
+        total > 0
+          ? `Downloading ${dataset.name} (${formatFileSize(total)})...`
+          : `Downloading ${dataset.name}...`,
     });
 
     const reader = response.body?.getReader();
@@ -87,32 +90,35 @@ export async function loadDataset(
 
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) break;
-      
+
       if (value) {
         chunks.push(value);
         loaded += value.length;
-        
+
         const elapsed = (Date.now() - startTime) / 1000;
         const speed = elapsed > 0.5 ? loaded / elapsed : 0; // Only calculate speed after 500ms
-        const percentage = total > 0 ? Math.round((loaded / total) * 100) : Math.min(50, Math.round((loaded / 10000) * 100)); // Fallback progress for unknown size
-        
-        onProgress?.({ 
-          loaded, 
-          total, 
+        const percentage =
+          total > 0
+            ? Math.round((loaded / total) * 100)
+            : Math.min(50, Math.round((loaded / 10000) * 100)); // Fallback progress for unknown size
+
+        onProgress?.({
+          loaded,
+          total,
           percentage,
           phase: `Downloading ${dataset.name}...`,
-          speed 
+          speed,
         });
       }
     }
 
-    onProgress?.({ 
-      loaded, 
-      total: loaded, 
-      percentage: 100, 
-      phase: "Processing dataset..." 
+    onProgress?.({
+      loaded,
+      total: loaded,
+      percentage: 100,
+      phase: "Processing dataset...",
     });
 
     // Combine all chunks into a single ArrayBuffer
@@ -120,7 +126,7 @@ export async function loadDataset(
     const mmdbBuffer = new ArrayBuffer(totalLength);
     const uint8View = new Uint8Array(mmdbBuffer);
     let offset = 0;
-    
+
     for (const chunk of chunks) {
       uint8View.set(chunk, offset);
       offset += chunk.length;
@@ -136,11 +142,11 @@ export async function loadDataset(
       `Successfully loaded ${dataset.name} (${mmdbBuffer.byteLength} bytes)`
     );
 
-    onProgress?.({ 
-      loaded, 
-      total: loaded, 
-      percentage: 100, 
-      phase: "Dataset loaded successfully!" 
+    onProgress?.({
+      loaded,
+      total: loaded,
+      percentage: 100,
+      phase: "Dataset loaded successfully!",
     });
 
     return { dataset, reader: mmdbReader };
