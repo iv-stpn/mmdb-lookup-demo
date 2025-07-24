@@ -23,17 +23,17 @@ const AVAILABLE_DATASETS: MMDBDataset[] = [
   {
     name: "GeoLite2-ASN",
     type: "asn",
-    url: "/mmdb/GeoLite2-ASN.mmdb",
+    url: `${import.meta.env.BASE_URL}mmdb/GeoLite2-ASN.mmdb`,
   },
   {
     name: "GeoLite2-City",
     type: "city",
-    url: "/mmdb/GeoLite2-City.mmdb",
+    url: `${import.meta.env.BASE_URL}mmdb/GeoLite2-City.mmdb`,
   },
   {
     name: "GeoLite2-Country",
     type: "country",
-    url: "/mmdb/GeoLite2-Country.mmdb",
+    url: `${import.meta.env.BASE_URL}mmdb/GeoLite2-Country.mmdb`,
   },
 ];
 
