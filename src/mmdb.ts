@@ -8,6 +8,15 @@ import {
 } from "mmdb-lib";
 import type { MMDBDataset, MMDBRecord } from "./types";
 
+// Utility function for formatting file sizes
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
+
 export interface MMDBContext {
   dataset: MMDBDataset | null;
   reader: Reader<Response> | null;
@@ -24,12 +33,26 @@ export function createMMDBContext(): MMDBContext {
 // Load a dataset and return updated context
 export async function loadDataset(
   _context: MMDBContext,
-  dataset: MMDBDataset
+  dataset: MMDBDataset,
+  onProgress?: (progress: { 
+    loaded: number; 
+    total: number; 
+    percentage: number; 
+    phase: string;
+    speed?: number;
+  }) => void
 ): Promise<MMDBContext> {
   try {
     console.log(`Loading dataset: ${dataset.name}`);
 
-    // Fetch the MMDB file
+    onProgress?.({ 
+      loaded: 0, 
+      total: 0, 
+      percentage: 0, 
+      phase: "Connecting to server..." 
+    });
+
+    // Fetch the MMDB file with progress tracking
     const response = await fetch(dataset.url, {
       mode: "cors",
       headers: {
@@ -43,19 +66,84 @@ export async function loadDataset(
       );
     }
 
-    const mmdbBuffer = await response.arrayBuffer();
+    const contentLength = response.headers.get('content-length');
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+    
+    onProgress?.({ 
+      loaded: 0, 
+      total, 
+      percentage: 0, 
+      phase: total > 0 ? `Downloading ${dataset.name} (${formatFileSize(total)})...` : `Downloading ${dataset.name}...`
+    });
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("Failed to get response reader");
+    }
+
+    const chunks: Uint8Array[] = [];
+    let loaded = 0;
+    const startTime = Date.now();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+      
+      if (value) {
+        chunks.push(value);
+        loaded += value.length;
+        
+        const elapsed = (Date.now() - startTime) / 1000;
+        const speed = elapsed > 0.5 ? loaded / elapsed : 0; // Only calculate speed after 500ms
+        const percentage = total > 0 ? Math.round((loaded / total) * 100) : Math.min(50, Math.round((loaded / 10000) * 100)); // Fallback progress for unknown size
+        
+        onProgress?.({ 
+          loaded, 
+          total, 
+          percentage,
+          phase: `Downloading ${dataset.name}...`,
+          speed 
+        });
+      }
+    }
+
+    onProgress?.({ 
+      loaded, 
+      total: loaded, 
+      percentage: 100, 
+      phase: "Processing dataset..." 
+    });
+
+    // Combine all chunks into a single ArrayBuffer
+    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const mmdbBuffer = new ArrayBuffer(totalLength);
+    const uint8View = new Uint8Array(mmdbBuffer);
+    let offset = 0;
+    
+    for (const chunk of chunks) {
+      uint8View.set(chunk, offset);
+      offset += chunk.length;
+    }
 
     // Convert ArrayBuffer to Buffer for mmdb-lib
     const buffer = Buffer.from(mmdbBuffer);
 
     // Initialize the MMDB reader with the real data
-    const reader = new Reader(buffer);
+    const mmdbReader = new Reader(buffer);
 
     console.log(
       `Successfully loaded ${dataset.name} (${mmdbBuffer.byteLength} bytes)`
     );
 
-    return { dataset, reader };
+    onProgress?.({ 
+      loaded, 
+      total: loaded, 
+      percentage: 100, 
+      phase: "Dataset loaded successfully!" 
+    });
+
+    return { dataset, reader: mmdbReader };
   } catch (error) {
     console.error("Error loading MMDB dataset:", error);
     throw new Error(

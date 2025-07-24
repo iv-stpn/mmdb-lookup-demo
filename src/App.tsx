@@ -6,6 +6,7 @@ import {
   Download,
   ExternalLink,
   Globe,
+  LoaderCircle,
   Search,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -18,6 +19,26 @@ import {
   type MMDBContext,
 } from "./mmdb";
 import type { LookupResult, MMDBDataset, MMDBRecord } from "./types";
+
+// Utility functions for formatting
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+};
+
+const formatSpeed = (bytesPerSecond: number): string => {
+  return `${formatFileSize(bytesPerSecond)}/s`;
+};
+
+const formatTime = (seconds: number): string => {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
+};
 
 const AVAILABLE_DATASETS: MMDBDataset[] = [
   {
@@ -64,6 +85,9 @@ interface LoadingState {
   isLoading: boolean;
   progress: number;
   phase: string;
+  loaded?: number;
+  total?: number;
+  speed?: number;
 }
 
 function App() {
@@ -113,16 +137,34 @@ function App() {
       setLoadingState({
         isLoading: true,
         progress: 0,
-        phase: "Loading dataset...",
+        phase: "Preparing to download...",
+        loaded: 0,
+        total: 0,
       });
 
-      const newContext = await loadDataset(mmdbContext, dataset);
+      const newContext = await loadDataset(
+        mmdbContext,
+        dataset,
+        (progressInfo) => {
+          setLoadingState({
+            isLoading: true,
+            progress: progressInfo.percentage,
+            phase: progressInfo.phase,
+            loaded: progressInfo.loaded,
+            total: progressInfo.total,
+            speed: progressInfo.speed,
+          });
+        }
+      );
+
       setMMDBContext(newContext);
 
       setLoadingState({
         isLoading: false,
         progress: 100,
         phase: "Dataset loaded successfully",
+        loaded: 0,
+        total: 0,
       });
       setIsDatasetLoaded(true);
     } catch (error) {
@@ -131,6 +173,8 @@ function App() {
         isLoading: false,
         progress: 0,
         phase: "Error loading dataset",
+        loaded: 0,
+        total: 0,
       });
       setIsDatasetLoaded(false);
     }
@@ -267,7 +311,7 @@ function App() {
                       type="button"
                       onClick={() => handleDatasetSelect(dataset)}
                       disabled={loadingState.isLoading}
-                      className={`w-full p-4 rounded-xl transition-all duration-200 text-left ${
+                      className={`w-full p-4 rounded-xl transition-all duration-200 text-left relative ${
                         selectedDataset?.name === dataset.name
                           ? "text-black"
                           : "text-black hover:bg-gray-100 hover:text-gray-800"
@@ -282,6 +326,12 @@ function App() {
                             : "Country"}{" "}
                         Data
                       </div>
+                      {selectedDataset?.name === dataset.name &&
+                        isDatasetLoaded && (
+                          <div className="absolute top-2 right-2">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          </div>
+                        )}
                     </button>
                   </div>
                   <button
@@ -298,17 +348,73 @@ function App() {
 
             {/* Loading State */}
             {loadingState.isLoading && (
-              <div className="bg-gray-100 border border-gray-300 rounded-xl p-4">
-                <div className="flex items-center mb-2">
-                  <Download className="w-5 h-5 mr-2 text-gray-600 animate-spin" />
-                  <span className="text-gray-700">{loadingState.phase}</span>
+              <div className="bg-gray-100 border border-gray-300 rounded-xl p-6">
+                <div className="flex items-center mb-4">
+                  <LoaderCircle className="w-5 h-5 mr-3 text-gray-600 animate-spin" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-gray-700 font-medium">
+                        {loadingState.phase}
+                      </span>
+                      <span className="text-sm font-mono text-gray-600">
+                        {loadingState.progress}%
+                      </span>
+                    </div>
+
+                    {/* Progress details */}
+                    {loadingState.loaded !== undefined &&
+                      loadingState.total !== undefined &&
+                      loadingState.total > 0 && (
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                          <span>
+                            {formatFileSize(loadingState.loaded)} /{" "}
+                            {formatFileSize(loadingState.total)}
+                          </span>
+                          {loadingState.speed && loadingState.speed > 0 && (
+                            <span className="flex items-center gap-2">
+                              <span>{formatSpeed(loadingState.speed)}</span>
+                              {loadingState.loaded > 0 &&
+                                loadingState.speed > 0 && (
+                                  <span>
+                                    ETA:{" "}
+                                    {formatTime(
+                                      (loadingState.total -
+                                        loadingState.loaded) /
+                                        loadingState.speed
+                                    )}
+                                  </span>
+                                )}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+
+                {/* Progress bar */}
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
                   <div
-                    className="bg-gray-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${loadingState.progress}%` }}
-                  />
+                    className="bg-gradient-to-r from-gray-600 to-gray-700 h-3 rounded-full transition-all duration-200 ease-out relative overflow-hidden"
+                    style={{ width: `${Math.max(loadingState.progress, 2)}%` }}
+                  >
+                    {/* Animated shimmer effect */}
+                    {loadingState.progress > 0 &&
+                      loadingState.progress < 100 && (
+                        <div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"
+                          style={{ animationDuration: "1.5s" }}
+                        />
+                      )}
+                  </div>
                 </div>
+
+                {/* Additional info for completed phases */}
+                {loadingState.progress === 100 && (
+                  <div className="mt-3 text-sm text-gray-600 flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                    Ready to perform lookups
+                  </div>
+                )}
               </div>
             )}
 
