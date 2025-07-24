@@ -99,14 +99,19 @@ export async function loadDataset(
 
         const elapsed = (Date.now() - startTime) / 1000;
         const speed = elapsed > 0.5 ? loaded / elapsed : 0; // Only calculate speed after 500ms
-        const percentage =
-          total > 0
-            ? Math.round((loaded / total) * 100)
-            : Math.min(50, Math.round((loaded / 10000) * 100)); // Fallback progress for unknown size
+        
+        let percentage: number;
+        if (total > 0) {
+          // Cap percentage at 100% in case loaded exceeds total (due to incorrect Content-Length)
+          percentage = Math.min(100, Math.round((loaded / total) * 100));
+        } else {
+          // Fallback progress for unknown size - cap at 90% during download
+          percentage = Math.min(90, Math.round((loaded / 50000) * 90)); // More conservative fallback
+        }
 
         onProgress?.({
           loaded,
-          total,
+          total: total > 0 ? total : loaded, // Update total if unknown
           percentage,
           phase: `Downloading ${dataset.name}...`,
           speed,
@@ -116,8 +121,8 @@ export async function loadDataset(
 
     onProgress?.({
       loaded,
-      total: loaded,
-      percentage: 100,
+      total: Math.max(total, loaded), // Ensure total is at least as much as loaded
+      percentage: 100, // Explicitly set to 100%
       phase: "Processing dataset...",
     });
 
@@ -144,8 +149,8 @@ export async function loadDataset(
 
     onProgress?.({
       loaded,
-      total: loaded,
-      percentage: 100,
+      total: Math.max(total, loaded), // Ensure total is at least as much as loaded
+      percentage: 100, // Explicitly set to 100%
       phase: "Dataset loaded successfully!",
     });
 

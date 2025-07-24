@@ -148,7 +148,7 @@ function App() {
         (progressInfo) => {
           setLoadingState({
             isLoading: true,
-            progress: progressInfo.percentage,
+            progress: Math.min(100, progressInfo.percentage), // Cap at 100%
             phase: progressInfo.phase,
             loaded: progressInfo.loaded,
             total: progressInfo.total,
@@ -357,7 +357,7 @@ function App() {
                         {loadingState.phase}
                       </span>
                       <span className="text-sm font-mono text-gray-600">
-                        {loadingState.progress}%
+                        {Math.min(100, loadingState.progress)}%
                       </span>
                     </div>
 
@@ -395,7 +395,7 @@ function App() {
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
                   <div
                     className="bg-gradient-to-r from-gray-600 to-gray-700 h-3 rounded-full transition-all duration-200 ease-out relative overflow-hidden"
-                    style={{ width: `${Math.max(loadingState.progress, 2)}%` }}
+                    style={{ width: `${Math.min(100, Math.max(loadingState.progress, 2))}%` }}
                   >
                     {/* Animated shimmer effect */}
                     {loadingState.progress > 0 &&
